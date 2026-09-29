@@ -34,6 +34,7 @@
 #include "../src/host-dispatch.h"
 #include "../src/host-errors.h"
 #include "../src/host-scenario.h"
+#include "../src/host-client.h"
 
 #define TEST_PORT_DEFAULT   15556
 #define TEST_BUFFER_SIZE    1024
@@ -503,6 +504,61 @@ static int run_session(int port, const host_backend_t *backend, const exchange_t
     return 0;
 }
 
+/* host_client_open() against a fake server: the names it tries, in order, and the one it keeps */
+static char g_tried[512];
+static const char *g_taken[4];
+
+static void *fake_open_client(const char *name, int exact, int *name_taken, void *arg)
+{
+    static char kept[HOST_CLIENT_NAME_BUF_SIZE];
+    int i;
+
+    strncat(g_tried, name, sizeof(g_tried) - strlen(g_tried) - 1);
+    strncat(g_tried, exact ? "! " : " ", sizeof(g_tried) - strlen(g_tried) - 1);
+    for (i = 0; i < 4 && g_taken[i]; i++)
+    {
+        if (strcmp(g_taken[i], name) == 0)
+        {
+            *name_taken = 1;
+            return NULL;
+        }
+    }
+    snprintf(kept, sizeof(kept), "%s", name);
+    return kept;
+
+    (void)arg;
+}
+
+static void check_client(int instance, const char *requested, size_t limit, const char *taken0, const char *taken1,
+                         const char *expected_tried, const char *expected_kept)
+{
+    const char *kept;
+
+    g_tried[0] = '\0';
+    g_taken[0] = taken0;
+    g_taken[1] = taken1;
+    g_taken[2] = NULL;
+    kept = host_client_open(instance, requested, limit, fake_open_client, NULL);
+    if (strcmp(g_tried, expected_tried) != 0 || !kept || strcmp(kept, expected_kept) != 0)
+    {
+        fprintf(stderr, "host_client_open(%i, %s, %zu): tried '%s' kept '%s', expected '%s' kept '%s'\n",
+                instance, requested ? requested : "-", limit, g_tried, kept ? kept : "-", expected_tried, expected_kept);
+        g_failures++;
+    }
+}
+
+static void run_client_names(void)
+{
+    check_client(7, NULL, 63, NULL, NULL, "effect_7 ", "effect_7");
+    check_client(7, "", 63, NULL, NULL, "effect_7 ", "effect_7");
+    check_client(7, ":::", 63, NULL, NULL, "___! ", "___");
+    check_client(7, "eq:low", 63, NULL, NULL, "eq_low! ", "eq_low");
+    check_client(7, "abcdefgh", 5, NULL, NULL, "abcde! ", "abcde");
+    check_client(12, "delay", 63, "delay", NULL, "delay! delay_12! ", "delay_12");
+    check_client(12, "abcdefgh", 6, "abcdef", NULL, "abcdef! abc_12! ", "abc_12");
+    check_client(12, "delay", 63, "delay", "delay_12", "delay! delay_12! effect_12 ", "effect_12");
+}
+
 int main(void)
 {
     const char *env = getenv("PROTOCOL_TEST_PORT");
@@ -514,6 +570,7 @@ int main(void)
         return 1;
     if (run_idle_session(port) != 0)
         return 1;
+    run_client_names();
 
     const char *scenarios = getenv("HOST_SCENARIOS");
     if (!scenarios)
