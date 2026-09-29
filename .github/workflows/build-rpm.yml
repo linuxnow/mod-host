@@ -1,0 +1,56 @@
+name: build-rpm
+
+# Builds the mod-host RPMs from this tree with the audinux spec (utils/build-rpm.sh),
+# as artifacts only: nothing is signed or published. Run by hand; never on push or tags.
+
+on:
+  workflow_dispatch:
+    inputs:
+      spec_ref:
+        description: 'linuxnow/fedora-spec ref holding moddevices/mod-host.spec'
+        required: true
+        default: 'mod-host-plumbing-lib'
+      fedora:
+        description: 'Fedora release of the build container'
+        required: true
+        default: '44'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: mod-host RPMs (fc${{ inputs.fedora }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    container:
+      image: fedora:${{ inputs.fedora }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install the build tools
+        run: dnf install -y --setopt=install_weak_deps=False git rpm-build dnf5-plugins patch tar gzip cpio binutils findutils
+
+      - uses: actions/checkout@v4
+        with:
+          path: src
+
+      - uses: actions/checkout@v4
+        with:
+          repository: linuxnow/fedora-spec
+          ref: ${{ inputs.spec_ref }}
+          path: fedora-spec
+          sparse-checkout: moddevices
+
+      - name: Build the RPMs from this tree
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/src"
+          src/utils/build-rpm.sh src fedora-spec/moddevices rpms
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mod-host-rpms-fc${{ inputs.fedora }}
+          path: rpms/*.rpm
+          if-no-files-found: error
+          retention-days: 30
