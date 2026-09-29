@@ -40,6 +40,7 @@
 */
 
 #include "host-errors.h"
+#include "host-backend.h"
 
 /* Log definitions */
 typedef enum {
@@ -55,9 +56,6 @@ typedef enum {
 ************************************************************************************************************************
 */
 
-#define MAX_PLUGIN_INSTANCES    9990
-#define MAX_TOOL_INSTANCES      10
-#define MAX_INSTANCES           (MAX_PLUGIN_INSTANCES + MAX_TOOL_INSTANCES)
 #define MAX_MIDI_CC_ASSIGN      1024
 #define MAX_POSTPONED_EVENTS    8192
 #define MAX_HMI_ADDRESSINGS     128
