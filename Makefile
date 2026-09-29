@@ -13,6 +13,8 @@ PROG = mod-host
 # default install paths
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
+LIBDIR = $(PREFIX)/lib
+INCLUDEDIR = $(PREFIX)/include
 SHAREDIR = $(PREFIX)/share
 MANDIR = $(SHAREDIR)/man/man1/
 
@@ -125,19 +127,49 @@ SRC += $(SRC_DIR)/sha1/sha1.c
 SRC += $(SRC_DIR)/rtmempool/rtmempool.c
 OBJ  = $(SRC:.$(EXT)=.o)
 
+# socket, protocol and command dispatch, with no plugin format behind them, as a shared library
+# that mod-host links like any other host; the soname is bumped on any ABI change (0.x),
+# a field appended to host_backend_t included.
+# mod-host carries no rpath: run it from the tree with LD_LIBRARY_PATH=.
+PLUMBING_VERSION = 0.1.0
+PLUMBING_SOVERSION = 0
+PLUMBING_DEVLINK = libmod-host-plumbing.so
+PLUMBING_SONAME = $(PLUMBING_DEVLINK).$(PLUMBING_SOVERSION)
+PLUMBING_LIB = $(PLUMBING_DEVLINK).$(PLUMBING_VERSION)
+PLUMBING_OBJ = $(SRC_DIR)/socket.o $(SRC_DIR)/protocol.o $(SRC_DIR)/utils.o $(SRC_DIR)/host-dispatch.o \
+               $(SRC_DIR)/host-scenario.o
+PLUMBING_HDR = $(SRC_DIR)/host-backend.h $(SRC_DIR)/host-dispatch.h $(SRC_DIR)/host-errors.h $(SRC_DIR)/mod-host.h \
+               $(SRC_DIR)/host-scenario.h $(SRC_DIR)/protocol.h $(SRC_DIR)/socket.h $(SRC_DIR)/utils.h
+PLUMBING_SCENARIOS = tests/host-scenarios.txt
+PLUMBING_PC_LIBDIR = $(patsubst $(PREFIX)/%,$${prefix}/%,$(LIBDIR))
+PLUMBING_PC_INCLUDEDIR = $(patsubst $(PREFIX)/%,$${prefix}/%,$(INCLUDEDIR))
+PLUMBING_PC_SHAREDIR = $(patsubst $(PREFIX)/%,$${prefix}/%,$(SHAREDIR))
+PLUMBING_LIBS = -L. -lmod-host-plumbing
+HOST_OBJ = $(filter-out $(PLUMBING_OBJ),$(OBJ))
+
 # default build
-all: $(PROG) $(PROG).so fake-input.so mod-monitor.so
+all: $(PROG) $(PROG).so fake-input.so mod-monitor.so $(PLUMBING_DEVLINK)
 
 # linking rule
-$(PROG): $(OBJ)
-	$(CC) $(OBJ) $(LDFLAGS) $(LIBS) -o $@
+$(PROG): $(HOST_OBJ) $(PLUMBING_DEVLINK)
+	$(CC) $(HOST_OBJ) $(PLUMBING_LIBS) $(LDFLAGS) $(LIBS) -o $@
 
-$(PROG).so: $(OBJ)
+$(PROG).so: $(HOST_OBJ) $(PLUMBING_DEVLINK)
 ifeq ($(MODAPP),1)
-	$(CC) $(OBJ) $(LDFLAGS) $(subst -ljack ,-ljackserver ,$(LIBS)) -shared -o $@
+	$(CC) $(HOST_OBJ) $(PLUMBING_LIBS) $(LDFLAGS) $(subst -ljack ,-ljackserver ,$(LIBS)) -shared -o $@
 else
-	$(CC) $(OBJ) $(LDFLAGS) $(LIBS) -shared -o $@
+	$(CC) $(HOST_OBJ) $(PLUMBING_LIBS) $(LDFLAGS) $(LIBS) -shared -o $@
 endif
+
+$(PLUMBING_LIB): $(PLUMBING_OBJ)
+	$(CC) $^ $(LDFLAGS) -shared -Wl,-soname,$(PLUMBING_SONAME) -lpthread -lm -o $@
+
+$(PLUMBING_DEVLINK): $(PLUMBING_LIB)
+	ln -sf $(PLUMBING_LIB) $(PLUMBING_SONAME)
+	ln -sf $(PLUMBING_SONAME) $@
+
+# the library's objects keep their symbols visible
+$(PLUMBING_OBJ): CFLAGS += -fvisibility=default
 
 # meta-rule to generate the object files
 %.o: %.$(EXT) src/info.h
@@ -158,7 +190,7 @@ src/mod-monitor.o: src/monitor/monitor-client.c
 	$(CC) $(INCS) $(CFLAGS) -DSTANDALONE_MONITOR_CLIENT -o $@ $<
 
 # install rule
-install: install_man
+install: install_man install-lib
 	install -d $(DESTDIR)$(BINDIR)
 	install -m 755 $(PROG) $(DESTDIR)$(BINDIR)
 	install -d $(DESTDIR)$(shell pkg-config --variable=libdir jack)/jack/
@@ -166,12 +198,38 @@ install: install_man
 	install -m 644 fake-input.so $(DESTDIR)$(shell pkg-config --variable=libdir jack)/jack/
 	install -m 644 mod-monitor.so $(DESTDIR)$(shell pkg-config --variable=libdir jack)/jack/
 
+install-lib: $(PLUMBING_LIB)
+	install -d $(DESTDIR)$(LIBDIR)/pkgconfig
+	install -m 755 $(PLUMBING_LIB) $(DESTDIR)$(LIBDIR)
+	ln -sf $(PLUMBING_LIB) $(DESTDIR)$(LIBDIR)/$(PLUMBING_SONAME)
+	ln -sf $(PLUMBING_SONAME) $(DESTDIR)$(LIBDIR)/$(PLUMBING_DEVLINK)
+	install -d $(DESTDIR)$(INCLUDEDIR)/mod-host
+	install -m 644 $(PLUMBING_HDR) $(DESTDIR)$(INCLUDEDIR)/mod-host
+	install -d $(DESTDIR)$(SHAREDIR)/mod-host
+	install -m 644 $(PLUMBING_SCENARIOS) $(DESTDIR)$(SHAREDIR)/mod-host
+	sed -e 's,@PREFIX@,$(PREFIX),' -e 's,@LIBDIR@,$(PLUMBING_PC_LIBDIR),' \
+	    -e 's,@INCLUDEDIR@,$(PLUMBING_PC_INCLUDEDIR),' -e 's,@SHAREDIR@,$(PLUMBING_PC_SHAREDIR),' \
+	    -e 's,@VERSION@,$(PLUMBING_VERSION),' \
+	    mod-host-plumbing.pc.in > $(DESTDIR)$(LIBDIR)/pkgconfig/mod-host-plumbing.pc
+
 # clean rule
 clean:
-	@rm -f $(SRC_DIR)/*.o $(SRC_DIR)/*/*.o $(PROG) $(PROG).exe $(PROG).so fake-input.so mod-monitor.so src/info.h
+	@rm -f $(SRC_DIR)/*.o $(SRC_DIR)/*/*.o $(PROG) $(PROG).exe $(PROG).so fake-input.so mod-monitor.so src/info.h $(PLUMBING_LIB) $(PLUMBING_SONAME) $(PLUMBING_DEVLINK) tests/plumbing_test tests/host_scenarios
 
 test:
 	py.test tests/test_host.py
+
+test-plumbing: tests/plumbing_test
+	./tests/plumbing_test
+
+# the tests are never installed: they find the library in the tree through their rpath
+PLUMBING_TEST_LIBS = $(PLUMBING_LIBS) -Wl,-rpath,'$$ORIGIN/..' -lpthread
+
+tests/plumbing_test: tests/plumbing_test.c $(PLUMBING_DEVLINK)
+	$(CC) $(INCS) $(filter-out -c,$(CFLAGS)) -Werror -o $@ $< $(PLUMBING_TEST_LIBS)
+
+tests/host_scenarios: tests/host_scenarios.c $(PLUMBING_DEVLINK)
+	$(CC) $(INCS) $(filter-out -c,$(CFLAGS)) -Werror -o $@ $< $(PLUMBING_TEST_LIBS)
 
 # manual page rule
 # Uses md2man to convert the README to groff man page
