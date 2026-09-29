@@ -137,8 +137,8 @@ PROTOCOL_DEVLINK = libmod-host-protocol.so
 PROTOCOL_SONAME = $(PROTOCOL_DEVLINK).$(PROTOCOL_SOVERSION)
 PROTOCOL_LIB = $(PROTOCOL_DEVLINK).$(PROTOCOL_VERSION)
 PROTOCOL_OBJ = $(SRC_DIR)/socket.o $(SRC_DIR)/protocol.o $(SRC_DIR)/utils.o $(SRC_DIR)/host-dispatch.o \
-               $(SRC_DIR)/host-scenario.o $(SRC_DIR)/host-client.o
-PROTOCOL_HDR = $(SRC_DIR)/host-backend.h $(SRC_DIR)/host-client.h $(SRC_DIR)/host-dispatch.h $(SRC_DIR)/host-errors.h $(SRC_DIR)/mod-host.h \
+               $(SRC_DIR)/host-scenario.o $(SRC_DIR)/host-client.o $(SRC_DIR)/host-options.o
+PROTOCOL_HDR = $(SRC_DIR)/host-backend.h $(SRC_DIR)/host-client.h $(SRC_DIR)/host-dispatch.h $(SRC_DIR)/host-options.h $(SRC_DIR)/host-errors.h $(SRC_DIR)/mod-host.h \
                $(SRC_DIR)/host-scenario.h $(SRC_DIR)/protocol.h $(SRC_DIR)/socket.h $(SRC_DIR)/utils.h
 PROTOCOL_SCENARIOS = tests/host-scenarios.txt
 PROTOCOL_PC_LIBDIR = $(patsubst $(PREFIX)/%,$${prefix}/%,$(LIBDIR))

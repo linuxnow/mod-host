@@ -21,6 +21,7 @@
  * Then runs tests/host-scenarios.txt through the direct exchange against a
  * reference backend, the same way a host in one process is tested. */
 
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,11 +31,13 @@
 #include <netinet/in.h>
 
 #include "../src/socket.h"
+#include "../src/mod-host.h"
 #include "../src/protocol.h"
 #include "../src/host-dispatch.h"
 #include "../src/host-errors.h"
 #include "../src/host-scenario.h"
 #include "../src/host-client.h"
+#include "../src/host-options.h"
 
 #define TEST_PORT_DEFAULT   15556
 #define TEST_BUFFER_SIZE    1024
@@ -559,6 +562,39 @@ static void run_client_names(void)
     check_client(12, "delay", 63, "delay", "delay_12", "delay! delay_12! effect_12 ", "effect_12");
 }
 
+/* host_options_parse(): the command line every host is spawned with */
+static void check_options(int accepted, const char *a1, const char *a2, const char *a3, int expected_ret,
+                          int nofork, int verbose, int interactive, int port, int feedback)
+{
+    char *argv[5] = { (char *)"host", (char *)a1, (char *)a2, (char *)a3, NULL };
+    int argc = 1 + (a1 != NULL) + (a2 != NULL) + (a3 != NULL);
+    host_options_t o;
+    int ret;
+
+    optind = 1;
+    opterr = 0;
+    ret = host_options_parse(argc, argv, accepted, &o);
+    if (ret != expected_ret || o.nofork != nofork || o.verbose != verbose || o.interactive != interactive
+        || o.socket_port != port || o.feedback_port != feedback)
+    {
+        fprintf(stderr, "host_options_parse(%s %s %s): ret %i nofork %i verbose %i interactive %i port %i feedback %i\n",
+                a1 ? a1 : "", a2 ? a2 : "", a3 ? a3 : "", ret, o.nofork, o.verbose, o.interactive,
+                o.socket_port, o.feedback_port);
+        g_failures++;
+    }
+}
+
+static void run_options(void)
+{
+    check_options(0, NULL, NULL, NULL, 0, 0, 0, 0, SOCKET_DEFAULT_PORT, 0);
+    check_options(0, "-n", "-p", "6001", 0, 1, 0, 0, 6001, 0);
+    check_options(0, "-v", "-f", "6002", 0, 1, 1, 0, SOCKET_DEFAULT_PORT, 6002);
+    check_options(HOST_OPTIONS_INTERACTIVE, "-i", NULL, NULL, 0, 1, 0, 1, SOCKET_DEFAULT_PORT, 0);
+    check_options(0, "-i", NULL, NULL, 0, 0, 0, 0, SOCKET_DEFAULT_PORT, 0);
+    check_options(0, "-V", NULL, NULL, 'V', 0, 0, 0, SOCKET_DEFAULT_PORT, 0);
+    check_options(0, "--help", NULL, NULL, 'h', 0, 0, 0, SOCKET_DEFAULT_PORT, 0);
+}
+
 int main(void)
 {
     const char *env = getenv("PROTOCOL_TEST_PORT");
@@ -571,6 +607,7 @@ int main(void)
     if (run_idle_session(port) != 0)
         return 1;
     run_client_names();
+    run_options();
 
     const char *scenarios = getenv("HOST_SCENARIOS");
     if (!scenarios)

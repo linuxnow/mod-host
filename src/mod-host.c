@@ -33,7 +33,6 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
-#include <getopt.h>
 #include <jack/jack.h>
 #include <pthread.h>
 #include <signal.h>
@@ -59,6 +58,7 @@
 #endif
 
 #include "mod-host.h"
+#include "host-options.h"
 #include "effects.h"
 #include "host-dispatch.h"
 #include "socket.h"
@@ -686,86 +686,40 @@ static void* intclient_socket_run(void* ptr)
 
 int main(int argc, char **argv)
 {
-    /* Command line options */
-    static struct option long_options[] = {
-#ifndef _WIN32
-        {"nofork", no_argument, 0, 'n'},
-#endif
-        {"verbose", no_argument, 0, 'v'},
-        {"socket-port", required_argument, 0, 'p'},
-        {"feedback-port", required_argument, 0, 'f'},
-        {"interactive", no_argument, 0, 'i'},
-        {"self-test", no_argument, 0, 't'},
-        {"version", no_argument, 0, 'V'},
-        {"help", no_argument, 0, 'h'},
-        {0, 0, 0, 0}
-    };
-
-    int opt, opt_index = 0;
+    host_options_t options;
 
     /* parse command line options */
-    int nofork = 0, verbose = 0,  interactive = 0, selftest = 0;
-    int socket_port = SOCKET_DEFAULT_PORT, feedback_port = 0;
-    while ((opt = getopt_long(argc, argv, "nvp:f:iVh", long_options, &opt_index)) != -1)
+    switch (host_options_parse(argc, argv, HOST_OPTIONS_INTERACTIVE | HOST_OPTIONS_SELF_TEST, &options))
     {
-        switch (opt)
-        {
-            case 'n':
-                nofork = 1;
-                break;
+        case 'V':
+            printf(
+                "%s version: %s\n"
+                "source code: https://github.com/moddevices/mod-host\n",
+            argv[0], version);
 
-            case 'v':
-                verbose = 1;
-                nofork = 1;
-                break;
+            exit(EXIT_SUCCESS);
+            break;
 
-            case 'p':
-                socket_port = atoi(optarg);
-                break;
-
-            case 'f':
-                feedback_port = atoi(optarg);
-                break;
-
-            case 'i':
-                interactive = 1;
-                nofork = 1;
-                break;
-
-            case 't':
-                selftest = 1;
-                break;
-
-            case 'V':
-                printf(
-                    "%s version: %s\n"
-                    "source code: https://github.com/moddevices/mod-host\n",
-                argv[0], version);
-
-                exit(EXIT_SUCCESS);
-                break;
-
-            case 'h':
-                printf(
-                    "Usage: %s [-vih] [-p <port>]\n"
-                    "  -v, --verbose                  verbose messages\n"
-                    "  -p, --socket-port=<port>       socket port definition\n"
-                    "  -f, --feedback-port=<port>     feedback port definition\n"
+        case 'h':
+            printf(
+                "Usage: %s [-vih] [-p <port>]\n"
+                "  -v, --verbose                  verbose messages\n"
+                "  -p, --socket-port=<port>       socket port definition\n"
+                "  -f, --feedback-port=<port>     feedback port definition\n"
 #ifndef SKIP_READLINE
-                    "  -i, --interactive              interactive mode\n"
+                "  -i, --interactive              interactive mode\n"
 #endif
 #ifndef _WIN32
-                    "  -n, --nofork                   run in nonforking mode\n"
+                "  -n, --nofork                   run in nonforking mode\n"
 #endif
-                    "  -V, --version                  print program version and exit\n"
-                    "  -h, --help                     print this help and exit\n",
-                argv[0]);
+                "  -V, --version                  print program version and exit\n"
+                "  -h, --help                     print this help and exit\n",
+            argv[0]);
 
-                exit(EXIT_SUCCESS);
-        }
+            exit(EXIT_SUCCESS);
     }
 
-    if (selftest)
+    if (options.selftest)
     {
         protocol_verbose(1);
         protocol_add_command(EFFECT_PATCH_SET, self_test_effects_set_property_cb);
@@ -784,7 +738,7 @@ int main(int argc, char **argv)
         exit(EXIT_SUCCESS);
     }
 
-    if (! nofork)
+    if (! options.nofork)
     {
 #ifndef _WIN32
         int pid;
@@ -809,7 +763,7 @@ int main(int argc, char **argv)
 #endif
     }
 
-    if (mod_host_init(NULL, socket_port, feedback_port) != 0)
+    if (mod_host_init(NULL, options.socket_port, options.feedback_port) != 0)
     {
         exit(EXIT_FAILURE);
         return 1;
@@ -817,7 +771,7 @@ int main(int argc, char **argv)
 
 #ifndef SKIP_READLINE
     /* Interactive mode */
-    if (interactive)
+    if (options.interactive)
     {
         interactive_mode();
         effects_finish(1);
@@ -840,14 +794,14 @@ int main(int argc, char **argv)
     }
 
     /* Verbose */
-    protocol_verbose(verbose);
+    protocol_verbose(options.verbose);
 
     /* Report ready */
     printf("mod-host ready!\n");
     fflush(stdout);
 
     running = 1;
-    while (running) socket_run(interactive);
+    while (running) socket_run(options.interactive);
 
     socket_finish();
     effects_finish(1);
