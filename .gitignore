@@ -5,6 +5,7 @@
 *.pyc
 *.swp
 *.tar.xz
+*.a
 *.log
 *.orig
 .kdev_include_paths
@@ -13,7 +14,10 @@ mod-host
 mod-host.install
 mod-host.service
 tests/effectlib_test
+tests/protocol_test
+tests/host_scenarios
 tests/rtmempool-test
 tests/self-test-result.json
 src/info.h
 PKGBUILD
+libmod-host-protocol.so.*
