@@ -22,8 +22,8 @@
 ************************************************************************************************************************
 */
 
-#ifndef PROTOCOL_H
-#define PROTOCOL_H
+#ifndef HOST_SCENARIO_H
+#define HOST_SCENARIO_H
 
 
 /*
@@ -32,14 +32,8 @@
 ************************************************************************************************************************
 */
 
-#include "utils.h"
-#include "socket.h"
-
-/*
-************************************************************************************************************************
-*           DO NOT CHANGE THESE DEFINES
-************************************************************************************************************************
-*/
+#include <stddef.h>
+#include "host-backend.h"
 
 
 /*
@@ -48,19 +42,10 @@
 ************************************************************************************************************************
 */
 
-#define PROTOCOL_MAX_COMMANDS       64
-
-// error messages configuration
-#define MESSAGE_COMMAND_NOT_FOUND   "not found"
-#define MESSAGE_MANY_ARGUMENTS      "many arguments"
-#define MESSAGE_FEW_ARGUMENTS       "few arguments"
-#define MESSAGE_INVALID_ARGUMENT    "invalid argument"
-
-// protocol_parse() errors, answered with protocol_error_message()
-#define PROTOCOL_NOT_FOUND          (-1)
-#define PROTOCOL_MANY_ARGUMENTS     (-2)
-#define PROTOCOL_FEW_ARGUMENTS      (-3)
-#define PROTOCOL_INVALID_ARGUMENT   (-4)
+#define HOST_SCENARIO_MAX_LINES     128
+#define HOST_SCENARIO_MAX_VARS      16
+#define HOST_SCENARIO_MAX_ABSENT    16
+#define HOST_SCENARIO_REPLY_SIZE    256
 
 
 /*
@@ -69,27 +54,33 @@
 ************************************************************************************************************************
 */
 
-// This struct is used on callbacks argument
-typedef struct PROTO_T {
-    char **list;
-    uint32_t list_count;
-    char *response;
-    uint32_t response_size;
-} proto_t;
+/* One $NAME the scenario file refers to and its value for the host under test. */
+typedef struct HOST_SCENARIO_VAR_T {
+    const char *name;
+    const char *value;
+} host_scenario_var_t;
 
+/* One line of the file after substitution: the command, the '|'-separated replies accepted, and the
+   verb whose absence (an earlier "resp -902") skips the line, or NULL. */
+typedef struct HOST_SCENARIO_T {
+    char *command;
+    char *reply;
+    char *guard;
+} host_scenario_t;
 
-/*
-************************************************************************************************************************
-*           GLOBAL VARIABLES
-************************************************************************************************************************
-*/
+typedef struct HOST_SCENARIO_LIST_T {
+    host_scenario_t lines[HOST_SCENARIO_MAX_LINES];
+    int count;
+} host_scenario_list_t;
 
+/* Sends one command and stores its NUL-terminated reply. Returns 0, or -1 when the host went away. */
+typedef int (*host_scenario_exchange_t)(void *ctx, const char *command, char *reply, size_t size);
 
-/*
-************************************************************************************************************************
-*           MACRO'S
-************************************************************************************************************************
-*/
+/* A backend in this process driven through the protocol parser over a socketpair. */
+typedef struct HOST_SCENARIO_DIRECT_T {
+    int fd[2];
+    const host_backend_t *backend;
+} host_scenario_direct_t;
 
 
 /*
@@ -98,20 +89,21 @@ typedef struct PROTO_T {
 ************************************************************************************************************************
 */
 
-void protocol_parse(msg_t *msg);
-void protocol_add_command(const char *command, void (*callback)(proto_t *proto));
-void protocol_response(const char *response, proto_t *proto);
-void protocol_response_int(int resp, proto_t *proto);
-void protocol_remove_commands(void);
-void protocol_verbose(int verbose);
-const char *protocol_error_message(int code);
+int host_scenario_load(const char *path, const host_scenario_var_t *vars, int var_count, host_scenario_list_t *list);
+void host_scenario_free(host_scenario_list_t *list);
 
+/* Runs every line, printing one line per exchange. Returns the number of failures, or -1 when the exchange
+   broke. When 'table' is given, a "resp -902" from a verb the table serves, or any other reply from a verb it
+   leaves NULL, is a failure too. */
+int host_scenario_run(const host_scenario_list_t *list, host_scenario_exchange_t exchange, void *ctx,
+                      const host_backend_t *table);
 
-/*
-************************************************************************************************************************
-*           CONFIGURATION ERRORS
-************************************************************************************************************************
-*/
+int host_scenario_socket_open(const char *host, int port);
+int host_scenario_socket_exchange(void *ctx, const char *command, char *reply, size_t size);
+
+int host_scenario_direct_open(host_scenario_direct_t *direct, const host_backend_t *backend);
+int host_scenario_direct_exchange(void *ctx, const char *command, char *reply, size_t size);
+void host_scenario_direct_close(host_scenario_direct_t *direct);
 
 
 /*
