@@ -1,7 +1,8 @@
 name: abi
 
 # libmod-host-protocol.so.0 against the frozen API in abi/: the exported symbols and installed
-# headers (make abi-exports) and the libabigail baseline (make abi-check).
+# headers (make abi-exports), the wire vocabulary of mod-host.h and host-errors.h and the libabigail
+# baseline (make abi-check).
 
 on:
   push:

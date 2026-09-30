@@ -238,15 +238,20 @@ tests/host_scenarios: tests/host_scenarios.c $(PROTOCOL_DEVLINK)
 #   $(PROTOCOL_SONAME).symbols  every function the library exports, one per line
 #   $(PROTOCOL_SONAME).headers  every header installed under include/mod-host
 #   $(PROTOCOL_SONAME).abi      the libabigail baseline: the exports and the types the headers reach
+#   wire-vocabulary.txt         what abidiff cannot see: every #define of mod-host.h (the verbs, OUTPUT_SET)
+#                               and every host-errors.h code, with the value the compiler reads
 # abi-exports needs only binutils and compares the first two with the build. abi-check needs
 # libabigail and compares a build with the baseline: an added function is compatible and needs a
 # new PROTOCOL_VERSION minor; a function removed or changed, and any type whose size or layout
 # changes (a field appended to host_backend_t included, since the host allocates it), needs a new
-# PROTOCOL_SOVERSION. abi-baseline records all three; the commit that moves a version runs it.
+# PROTOCOL_SOVERSION. abi-vocabulary (run by abi-check) fails on any change to the wire vocabulary, an
+# addition included until the list records it. abi-baseline records all four; the commit that moves a
+# version, or adds a verb or a code, runs it.
 ABI_DIR = build/abi
 ABI_SYMBOLS = abi/$(PROTOCOL_SONAME).symbols
 ABI_HEADERS = abi/$(PROTOCOL_SONAME).headers
 ABI_BASELINE = abi/$(PROTOCOL_SONAME).abi
+ABI_VOCABULARY = abi/wire-vocabulary.txt
 
 abi-exports: $(PROTOCOL_LIB)
 	sh tests/abi-exports.sh $(PROTOCOL_LIB) $(ABI_SYMBOLS) $(ABI_HEADERS) $(PROTOCOL_HDR)
@@ -267,11 +272,15 @@ abi-baseline: abi-stage
 	abidw --headers-dir $(ABI_DIR)/include --out-file $(ABI_BASELINE) $(ABI_DIR)/$(PROTOCOL_LIB)
 	nm -D --defined-only $(ABI_DIR)/$(PROTOCOL_LIB) | awk '{ print $$2, $$3 }' | LC_ALL=C sort > $(ABI_SYMBOLS)
 	for h in $(PROTOCOL_HDR); do basename $$h; done | LC_ALL=C sort > $(ABI_HEADERS)
+	CC="$(CC)" sh tests/abi-vocabulary.sh print $(SRC_DIR)/mod-host.h $(SRC_DIR)/host-errors.h > $(ABI_VOCABULARY)
 
-abi-check: abi-stage
+abi-vocabulary:
+	CC="$(CC)" sh tests/abi-vocabulary.sh check $(SRC_DIR)/mod-host.h $(SRC_DIR)/host-errors.h $(ABI_VOCABULARY)
+
+abi-check: abi-stage abi-vocabulary
 	sh tests/abi-check.sh $(ABI_DIR)/$(PROTOCOL_LIB) $(ABI_DIR)/include $(ABI_BASELINE)
 
-.PHONY: abi-exports abi-stage abi-baseline abi-check
+.PHONY: abi-exports abi-stage abi-baseline abi-vocabulary abi-check
 
 # manual page rule
 # Uses md2man to convert the README to groff man page
