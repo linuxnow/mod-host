@@ -39,6 +39,7 @@ typedef int SOCKET;
 #endif
 
 #include "socket.h"
+#include "protocol-internal.h"
 #include "mod-memset.h"
 
 
@@ -113,7 +114,7 @@ static int g_idle_interval_ms;
 ************************************************************************************************************************
 */
 
-int socket_start(int socket_port, int feedback_port, int buffer_size)
+MOD_HOST_PROTOCOL_EXPORT int socket_start(int socket_port, int feedback_port, int buffer_size)
 {
 #ifdef _WIN32
     WSADATA wsaData;
@@ -218,7 +219,7 @@ int socket_start(int socket_port, int feedback_port, int buffer_size)
 }
 
 
-void socket_finish(void)
+MOD_HOST_PROTOCOL_EXPORT void socket_finish(void)
 {
     if (g_serverfd == INVALID_SOCKET)
         return;
@@ -249,23 +250,23 @@ void socket_finish(void)
 }
 
 
-void socket_set_receive_cb(void (*receive_cb)(msg_t *msg))
+MOD_HOST_PROTOCOL_EXPORT void socket_set_receive_cb(void (*receive_cb)(msg_t *msg))
 {
     g_receive_cb = receive_cb;
 }
 
-void socket_set_idle_cb(void (*idle_cb)(void))
+MOD_HOST_PROTOCOL_EXPORT void socket_set_idle_cb(void (*idle_cb)(void))
 {
     g_idle_cb = idle_cb;
 }
 
-void socket_set_idle_interval(int interval_ms)
+MOD_HOST_PROTOCOL_EXPORT void socket_set_idle_interval(int interval_ms)
 {
     g_idle_interval_ms = interval_ms;
 }
 
 
-int socket_send(int destination, const char *buffer, int size)
+MOD_HOST_PROTOCOL_EXPORT int socket_send(int destination, const char *buffer, int size)
 {
     int ret = -1;
 
@@ -284,7 +285,7 @@ int socket_send(int destination, const char *buffer, int size)
 }
 
 
-int socket_send_feedback(const char *buffer)
+MOD_HOST_PROTOCOL_EXPORT int socket_send_feedback(const char *buffer)
 {
     if (g_fbclientfd == INVALID_SOCKET) return -1;
 
@@ -292,7 +293,7 @@ int socket_send_feedback(const char *buffer)
 }
 
 
-void socket_run(int exit_on_failure)
+MOD_HOST_PROTOCOL_EXPORT void socket_run(int exit_on_failure)
 {
     SOCKET clientfd, fbclientfd;
     int count;

@@ -34,6 +34,7 @@
 #include "../src/host-dispatch.h"
 #include "../src/host-errors.h"
 #include "../src/host-scenario.h"
+#include "../src/protocol-internal.h"
 
 #define TEST_PORT_DEFAULT   15556
 #define TEST_BUFFER_SIZE    1024

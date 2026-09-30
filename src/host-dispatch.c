@@ -36,6 +36,7 @@
 #include "host-errors.h"
 #include "mod-host.h"
 #include "socket.h"
+#include "protocol-internal.h"
 
 
 /*
@@ -183,7 +184,7 @@ static void monitor_output_cb(proto_t *proto)
 ************************************************************************************************************************
 */
 
-void host_dispatch_register(const host_backend_t *backend)
+MOD_HOST_PROTOCOL_EXPORT void host_dispatch_register(const host_backend_t *backend)
 {
     g_backend = backend;
 
@@ -199,7 +200,7 @@ void host_dispatch_register(const host_backend_t *backend)
     protocol_add_command(STATE_SAVE, state_save_cb);
 }
 
-void host_dispatch_register_monitor_output(int (*monitor_output)(int instance, const char *symbol))
+MOD_HOST_PROTOCOL_EXPORT void host_dispatch_register_monitor_output(int (*monitor_output)(int instance, const char *symbol))
 {
     g_monitor_output = monitor_output;
 
@@ -208,7 +209,7 @@ void host_dispatch_register_monitor_output(int (*monitor_output)(int instance, c
 
 /* Every other command of mod-host.h answers ERR_INVALID_OPERATION, so a client that speaks the
    whole protocol to a host with only the backend table behind it never reads a grammar error. */
-void host_dispatch_register_unsupported(void)
+MOD_HOST_PROTOCOL_EXPORT void host_dispatch_register_unsupported(void)
 {
     static const char *const commands[] = {
         EFFECT_PRESET_SAVE, EFFECT_PRESET_SHOW, EFFECT_PARAM_MON, EFFECT_PATCH_GET, EFFECT_PATCH_SET,
@@ -229,7 +230,7 @@ void host_dispatch_unsupported_cb(proto_t *proto)
     protocol_response_int(ERR_INVALID_OPERATION, proto);
 }
 
-int host_dispatch_output_set(int instance, const char *symbol, float value)
+MOD_HOST_PROTOCOL_EXPORT int host_dispatch_output_set(int instance, const char *symbol, float value)
 {
     char buffer[SOCKET_MSG_BUFFER_SIZE];
     int len = snprintf(buffer, sizeof(buffer), OUTPUT_SET, instance, symbol, value);

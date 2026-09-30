@@ -31,6 +31,7 @@
 
 #include "protocol.h"
 #include "utils.h"
+#include "protocol-internal.h"
 
 
 /*
@@ -120,7 +121,7 @@ static int is_wildcard(const char *str)
 ************************************************************************************************************************
 */
 
-void protocol_parse(msg_t *msg)
+MOD_HOST_PROTOCOL_EXPORT void protocol_parse(msg_t *msg)
 {
     uint32_t i, j;
     int32_t index;
@@ -245,7 +246,7 @@ void protocol_parse(msg_t *msg)
 }
 
 
-void protocol_add_command(const char *command, void (*callback)(proto_t *proto))
+MOD_HOST_PROTOCOL_EXPORT void protocol_add_command(const char *command, void (*callback)(proto_t *proto))
 {
     if (g_command_count >= PROTOCOL_MAX_COMMANDS)
     {
@@ -262,7 +263,7 @@ void protocol_add_command(const char *command, void (*callback)(proto_t *proto))
 }
 
 
-void protocol_response(const char *response, proto_t *proto)
+MOD_HOST_PROTOCOL_EXPORT void protocol_response(const char *response, proto_t *proto)
 {
     proto->response_size = strlen(response);
     proto->response = MALLOC(proto->response_size + 1);
@@ -270,7 +271,7 @@ void protocol_response(const char *response, proto_t *proto)
 }
 
 
-void protocol_response_int(int resp, proto_t *proto)
+MOD_HOST_PROTOCOL_EXPORT void protocol_response_int(int resp, proto_t *proto)
 {
     char buffer[32];
     snprintf(buffer, 32, "resp %i", resp);
@@ -279,7 +280,7 @@ void protocol_response_int(int resp, proto_t *proto)
 }
 
 
-void protocol_remove_commands(void)
+MOD_HOST_PROTOCOL_EXPORT void protocol_remove_commands(void)
 {
     unsigned int i;
 
@@ -300,7 +301,7 @@ const char *protocol_error_message(int code)
     return g_error_messages[-code-1];
 }
 
-void protocol_verbose(int verbose)
+MOD_HOST_PROTOCOL_EXPORT void protocol_verbose(int verbose)
 {
     g_verbose = verbose;
 }

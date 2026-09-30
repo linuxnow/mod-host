@@ -96,10 +96,6 @@ typedef struct MSG_T {
 
 // splits the string in each whitespace occurrence and returns an array of strings NULL terminated
 char** strarr_split(char *str);
-// returns the string array length
-uint32_t strarr_length(char **str_array);
-// joins a string array in a single string
-char* strarr_join(char** const str_array);
 // duplicate a string
 char *str_duplicate(const char *str);
 

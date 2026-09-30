@@ -2,17 +2,12 @@ T host_dispatch_output_set
 T host_dispatch_register
 T host_dispatch_register_monitor_output
 T host_dispatch_register_unsupported
-T host_dispatch_unsupported_cb
-T host_scenario_direct_close
-T host_scenario_direct_exchange
-T host_scenario_direct_open
 T host_scenario_free
 T host_scenario_load
 T host_scenario_run
 T host_scenario_socket_exchange
 T host_scenario_socket_open
 T protocol_add_command
-T protocol_error_message
 T protocol_parse
 T protocol_remove_commands
 T protocol_response
@@ -27,6 +22,4 @@ T socket_set_idle_interval
 T socket_set_receive_cb
 T socket_start
 T str_duplicate
-T strarr_join
-T strarr_length
 T strarr_split

@@ -42,6 +42,7 @@
 #include "protocol.h"
 #include "socket.h"
 #include "utils.h"
+#include "protocol-internal.h"
 
 
 /*
@@ -189,7 +190,7 @@ static int read_reply(int fd, char *buf, size_t size)
 ************************************************************************************************************************
 */
 
-int host_scenario_load(const char *path, const host_scenario_var_t *vars, int var_count, host_scenario_list_t *list)
+MOD_HOST_PROTOCOL_EXPORT int host_scenario_load(const char *path, const host_scenario_var_t *vars, int var_count, host_scenario_list_t *list)
 {
     FILE *fp = fopen(path, "r");
     char line[1024];
@@ -242,7 +243,7 @@ int host_scenario_load(const char *path, const host_scenario_var_t *vars, int va
     return list->count;
 }
 
-void host_scenario_free(host_scenario_list_t *list)
+MOD_HOST_PROTOCOL_EXPORT void host_scenario_free(host_scenario_list_t *list)
 {
     int i;
 
@@ -255,7 +256,7 @@ void host_scenario_free(host_scenario_list_t *list)
     list->count = 0;
 }
 
-int host_scenario_run(const host_scenario_list_t *list, host_scenario_exchange_t exchange, void *ctx,
+MOD_HOST_PROTOCOL_EXPORT int host_scenario_run(const host_scenario_list_t *list, host_scenario_exchange_t exchange, void *ctx,
                       const host_backend_t *table)
 {
     char absent[HOST_SCENARIO_MAX_ABSENT][32];
@@ -325,7 +326,7 @@ int host_scenario_run(const host_scenario_list_t *list, host_scenario_exchange_t
     return failures;
 }
 
-int host_scenario_socket_open(const char *host, int port)
+MOD_HOST_PROTOCOL_EXPORT int host_scenario_socket_open(const char *host, int port)
 {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in addr;
@@ -348,7 +349,7 @@ int host_scenario_socket_open(const char *host, int port)
     return fd;
 }
 
-int host_scenario_socket_exchange(void *ctx, const char *command, char *reply, size_t size)
+MOD_HOST_PROTOCOL_EXPORT int host_scenario_socket_exchange(void *ctx, const char *command, char *reply, size_t size)
 {
     int fd = *(int *)ctx;
 

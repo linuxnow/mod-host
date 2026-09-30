@@ -76,11 +76,6 @@ typedef struct HOST_SCENARIO_LIST_T {
 /* Sends one command and stores its NUL-terminated reply. Returns 0, or -1 when the host went away. */
 typedef int (*host_scenario_exchange_t)(void *ctx, const char *command, char *reply, size_t size);
 
-/* A backend in this process driven through the protocol parser over a socketpair. */
-typedef struct HOST_SCENARIO_DIRECT_T {
-    int fd[2];
-    const host_backend_t *backend;
-} host_scenario_direct_t;
 
 
 /*
@@ -100,10 +95,6 @@ int host_scenario_run(const host_scenario_list_t *list, host_scenario_exchange_t
 
 int host_scenario_socket_open(const char *host, int port);
 int host_scenario_socket_exchange(void *ctx, const char *command, char *reply, size_t size);
-
-int host_scenario_direct_open(host_scenario_direct_t *direct, const host_backend_t *backend);
-int host_scenario_direct_exchange(void *ctx, const char *command, char *reply, size_t size);
-void host_scenario_direct_close(host_scenario_direct_t *direct);
 
 
 /*

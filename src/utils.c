@@ -23,6 +23,7 @@
 */
 
 #include "utils.h"
+#include "protocol-internal.h"
 #include <math.h>
 #include <string.h>
 
@@ -114,7 +115,7 @@ static void trim_spaces(char *str)
 ************************************************************************************************************************
 */
 
-char** strarr_split(char *str)
+MOD_HOST_PROTOCOL_EXPORT char** strarr_split(char *str)
 {
     uint32_t count;
     char *pstr, **list = NULL;
@@ -238,7 +239,7 @@ char* strarr_join(char **str_array)
     return (*str_array);
 }
 
-char *str_duplicate(const char *str)
+MOD_HOST_PROTOCOL_EXPORT char *str_duplicate(const char *str)
 {
     char *copy = MALLOC(strlen(str) + 1);
     strcpy(copy, str);

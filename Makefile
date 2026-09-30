@@ -168,8 +168,9 @@ $(PROTOCOL_DEVLINK): $(PROTOCOL_LIB)
 	ln -sf $(PROTOCOL_LIB) $(PROTOCOL_SONAME)
 	ln -sf $(PROTOCOL_SONAME) $@
 
-# the library's objects keep their symbols visible
-$(PROTOCOL_OBJ): CFLAGS += -fvisibility=default
+# the library exports only what its definitions mark MOD_HOST_PROTOCOL_EXPORT (src/protocol-internal.h),
+# in a debug build too
+$(PROTOCOL_OBJ): CFLAGS += -fvisibility=hidden
 
 # meta-rule to generate the object files
 %.o: %.$(EXT) src/info.h
@@ -223,11 +224,12 @@ test:
 test-protocol: tests/protocol_test
 	./tests/protocol_test
 
-# the tests are never installed: they find the library in the tree through their rpath
+# the tests are never installed: they find the library in the tree through their rpath. protocol_test
+# reaches functions the library does not export, so it links the library's objects instead
 PROTOCOL_TEST_LIBS = $(PROTOCOL_LIBS) -Wl,-rpath,'$$ORIGIN/..' -lpthread
 
-tests/protocol_test: tests/protocol_test.c $(PROTOCOL_DEVLINK)
-	$(CC) $(INCS) $(filter-out -c,$(CFLAGS)) -Werror -o $@ $< $(PROTOCOL_TEST_LIBS)
+tests/protocol_test: tests/protocol_test.c $(PROTOCOL_OBJ)
+	$(CC) $(INCS) $(filter-out -c,$(CFLAGS)) -Werror -o $@ $< $(PROTOCOL_OBJ) -lpthread -lm
 
 tests/host_scenarios: tests/host_scenarios.c $(PROTOCOL_DEVLINK)
 	$(CC) $(INCS) $(filter-out -c,$(CFLAGS)) -Werror -o $@ $< $(PROTOCOL_TEST_LIBS)
@@ -254,7 +256,7 @@ abi-stage:
 	rm -rf $(ABI_DIR)
 	mkdir -p $(ABI_DIR)/obj $(ABI_DIR)/include
 	for s in $(PROTOCOL_OBJ:.o=.c); do \
-	    $(CC) $(INCS) $(filter-out -fvisibility=hidden,$(CFLAGS)) -fvisibility=default -g \
+	    $(CC) $(INCS) $(CFLAGS) -fvisibility=hidden -g \
 	        -o $(ABI_DIR)/obj/$$(basename $$s .c).o $$s || exit 1; \
 	done
 	$(CC) $(ABI_DIR)/obj/*.o -shared -Wl,-soname,$(PROTOCOL_SONAME) -lpthread -lm -o $(ABI_DIR)/$(PROTOCOL_LIB)

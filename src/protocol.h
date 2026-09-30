@@ -56,7 +56,7 @@
 #define MESSAGE_FEW_ARGUMENTS       "few arguments"
 #define MESSAGE_INVALID_ARGUMENT    "invalid argument"
 
-// protocol_parse() errors, answered with protocol_error_message()
+// protocol_parse() errors
 #define PROTOCOL_NOT_FOUND          (-1)
 #define PROTOCOL_MANY_ARGUMENTS     (-2)
 #define PROTOCOL_FEW_ARGUMENTS      (-3)
@@ -104,7 +104,6 @@ void protocol_response(const char *response, proto_t *proto);
 void protocol_response_int(int resp, proto_t *proto);
 void protocol_remove_commands(void);
 void protocol_verbose(int verbose);
-const char *protocol_error_message(int code);
 
 
 /*
