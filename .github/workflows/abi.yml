@@ -1,0 +1,48 @@
+name: abi
+
+# libmod-host-protocol.so.0 against the frozen API in abi/: the exported symbols and installed
+# headers (make abi-exports) and the libabigail baseline (make abi-check).
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  abi:
+    name: ABI of libmod-host-protocol against its baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: fedora:44
+    steps:
+      - name: Install the build tools
+        run: |
+          dnf install -y --setopt=install_weak_deps=False gcc make pkgconf-pkg-config libabigail binutils diffutils \
+            readline-devel pipewire-jack-audio-connection-kit-devel lilv-devel
+
+      - uses: actions/checkout@v4
+
+      - name: Build the library
+        run: make libmod-host-protocol.so
+
+      - name: Compare the exports and the headers with abi/
+        run: make abi-exports
+
+      - name: Compare the build with the baseline
+        run: make abi-check
+
+      - name: Run the protocol checks
+        run: make test-protocol
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: libmod-host-protocol-abi
+          path: |
+            build/abi/new.abi
+            build/abi/abidiff.txt
+          if-no-files-found: ignore
+          retention-days: 14

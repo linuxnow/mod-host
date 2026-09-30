@@ -215,6 +215,7 @@ install-lib: $(PROTOCOL_LIB)
 # clean rule
 clean:
 	@rm -f $(SRC_DIR)/*.o $(SRC_DIR)/*/*.o $(PROG) $(PROG).exe $(PROG).so fake-input.so mod-monitor.so src/info.h $(PROTOCOL_LIB) $(PROTOCOL_SONAME) $(PROTOCOL_DEVLINK) tests/protocol_test tests/host_scenarios
+	@rm -rf $(ABI_DIR)
 
 test:
 	py.test tests/test_host.py
@@ -230,6 +231,45 @@ tests/protocol_test: tests/protocol_test.c $(PROTOCOL_DEVLINK)
 
 tests/host_scenarios: tests/host_scenarios.c $(PROTOCOL_DEVLINK)
 	$(CC) $(INCS) $(filter-out -c,$(CFLAGS)) -Werror -o $@ $< $(PROTOCOL_TEST_LIBS)
+
+# The ABI of libmod-host-protocol, frozen in abi/:
+#   $(PROTOCOL_SONAME).symbols  every function the library exports, one per line
+#   $(PROTOCOL_SONAME).headers  every header installed under include/mod-host
+#   $(PROTOCOL_SONAME).abi      the libabigail baseline: the exports and the types the headers reach
+# abi-exports needs only binutils and compares the first two with the build. abi-check needs
+# libabigail and compares a build with the baseline: an added function is compatible and needs a
+# new PROTOCOL_VERSION minor; a function removed or changed, and any type whose size or layout
+# changes (a field appended to host_backend_t included, since the host allocates it), needs a new
+# PROTOCOL_SOVERSION. abi-baseline records all three; the commit that moves a version runs it.
+ABI_DIR = build/abi
+ABI_SYMBOLS = abi/$(PROTOCOL_SONAME).symbols
+ABI_HEADERS = abi/$(PROTOCOL_SONAME).headers
+ABI_BASELINE = abi/$(PROTOCOL_SONAME).abi
+
+abi-exports: $(PROTOCOL_LIB)
+	sh tests/abi-exports.sh $(PROTOCOL_LIB) $(ABI_SYMBOLS) $(ABI_HEADERS) $(PROTOCOL_HDR)
+
+# the same objects with debug information and nothing stripped, so abidw can read the types
+abi-stage:
+	rm -rf $(ABI_DIR)
+	mkdir -p $(ABI_DIR)/obj $(ABI_DIR)/include
+	for s in $(PROTOCOL_OBJ:.o=.c); do \
+	    $(CC) $(INCS) $(filter-out -fvisibility=hidden,$(CFLAGS)) -fvisibility=default -g \
+	        -o $(ABI_DIR)/obj/$$(basename $$s .c).o $$s || exit 1; \
+	done
+	$(CC) $(ABI_DIR)/obj/*.o -shared -Wl,-soname,$(PROTOCOL_SONAME) -lpthread -lm -o $(ABI_DIR)/$(PROTOCOL_LIB)
+	install -m 644 $(PROTOCOL_HDR) $(ABI_DIR)/include
+
+abi-baseline: abi-stage
+	mkdir -p abi
+	abidw --headers-dir $(ABI_DIR)/include --out-file $(ABI_BASELINE) $(ABI_DIR)/$(PROTOCOL_LIB)
+	nm -D --defined-only $(ABI_DIR)/$(PROTOCOL_LIB) | awk '{ print $$2, $$3 }' | LC_ALL=C sort > $(ABI_SYMBOLS)
+	for h in $(PROTOCOL_HDR); do basename $$h; done | LC_ALL=C sort > $(ABI_HEADERS)
+
+abi-check: abi-stage
+	sh tests/abi-check.sh $(ABI_DIR)/$(PROTOCOL_LIB) $(ABI_DIR)/include $(ABI_BASELINE)
+
+.PHONY: abi-exports abi-stage abi-baseline abi-check
 
 # manual page rule
 # Uses md2man to convert the README to groff man page

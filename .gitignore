@@ -21,3 +21,5 @@ tests/self-test-result.json
 src/info.h
 PKGBUILD
 libmod-host-protocol.so.*
+build/
+!abi/libmod-host-protocol.so.*
