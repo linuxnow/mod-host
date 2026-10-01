@@ -1,0 +1,80 @@
+define SOCKET_DEFAULT_PORT 5555
+define SOCKET_MSG_BUFFER_SIZE 1024
+define EFFECT_ADD "add %s %i ..."
+define EFFECT_REMOVE "remove %i"
+define EFFECT_PRESET_LOAD "preset_load %i %s"
+define EFFECT_PRESET_SAVE "preset_save %i %s %s %s"
+define EFFECT_PRESET_SHOW "preset_show %s"
+define EFFECT_CONNECT "connect %s %s"
+define EFFECT_DISCONNECT "disconnect %s %s"
+define EFFECT_BYPASS "bypass %i %i"
+define EFFECT_PARAM_SET "param_set %i %s %s"
+define EFFECT_PARAM_GET "param_get %i %s"
+define EFFECT_PARAM_MON "param_monitor %i %s %s %f"
+define EFFECT_PATCH_GET "patch_get %i %s"
+define EFFECT_PATCH_SET "patch_set %i %s %s"
+define EFFECT_LICENSEE "licensee %i"
+define EFFECT_SET_BPM "set_bpm %f"
+define EFFECT_SET_BPB "set_bpb %f"
+define MONITOR_ADDR_SET "monitor %s %i %i"
+define MONITOR_OUTPUT "monitor_output %i %s"
+define MONITOR_MIDI_PROGRAM "monitor_midi_program %i %i"
+define MIDI_LEARN "midi_learn %i %s %f %f"
+define MIDI_MAP "midi_map %i %s %i %i %f %f"
+define MIDI_UNMAP "midi_unmap %i %s"
+define CC_MAP "cc_map %i %s %i %i %s %f %f %f %i %i %s %i ..."
+define CC_VALUE_SET "cc_value_set %i %s %f"
+define CC_UNMAP "cc_unmap %i %s"
+define CV_MAP "cv_map %i %s %s %f %f %s"
+define CV_UNMAP "cv_unmap %i %s"
+define HMI_MAP "hmi_map %i %s %i %i %i %i %i %s %f %f %i"
+define HMI_UNMAP "hmi_unmap %i %s"
+define CPU_LOAD "cpu_load"
+define LOAD_COMMANDS "load %s"
+define SAVE_COMMANDS "save %s"
+define BUNDLE_ADD "bundle_add %s"
+define BUNDLE_REMOVE "bundle_remove %s %s"
+define STATE_LOAD "state_load %s"
+define STATE_SAVE "state_save %s"
+define STATE_TMPDIR "state_tmpdir %s"
+define FEATURE_ENABLE "feature_enable %s %i"
+define TRANSPORT "transport %i %f %f"
+define TRANSPORT_SYNC "transport_sync %s"
+define SHOW_EXTERNAL_UI "show_external_ui %i"
+define OUTPUT_DATA_READY "output_data_ready"
+define HELP "help"
+define QUIT "quit"
+define OUTPUT_SET "output_set %i %s %f"
+error SUCCESS 0
+error ERR_INSTANCE_INVALID -1
+error ERR_INSTANCE_ALREADY_EXISTS -2
+error ERR_INSTANCE_NON_EXISTS -3
+error ERR_INSTANCE_UNLICENSED -4
+error ERR_HOST_INVALID_URI -101
+error ERR_HOST_INSTANTIATION -102
+error ERR_HOST_INVALID_PARAM_SYMBOL -103
+error ERR_HOST_INVALID_PRESET_URI -104
+error ERR_HOST_CANT_LOAD_STATE -105
+error ERR_LV2_INVALID_URI -101
+error ERR_LV2_INSTANTIATION -102
+error ERR_LV2_INVALID_PARAM_SYMBOL -103
+error ERR_LV2_INVALID_PRESET_URI -104
+error ERR_LV2_CANT_LOAD_STATE -105
+error ERR_JACK_CLIENT_CREATION -201
+error ERR_JACK_CLIENT_ACTIVATION -202
+error ERR_JACK_CLIENT_DEACTIVATION -203
+error ERR_JACK_PORT_REGISTER -204
+error ERR_JACK_PORT_CONNECTION -205
+error ERR_JACK_PORT_DISCONNECTION -206
+error ERR_JACK_VALUE_OUT_OF_RANGE -207
+error ERR_ASSIGNMENT_ALREADY_EXISTS -301
+error ERR_ASSIGNMENT_INVALID_OP -302
+error ERR_ASSIGNMENT_LIST_FULL -303
+error ERR_ASSIGNMENT_FAILED -304
+error ERR_ASSIGNMENT_UNUSED -305
+error ERR_CONTROL_CHAIN_UNAVAILABLE -401
+error ERR_ABLETON_LINK_UNAVAILABLE -402
+error ERR_HMI_UNAVAILABLE -403
+error ERR_EXTERNAL_UI_UNAVAILABLE -404
+error ERR_MEMORY_ALLOCATION -901
+error ERR_INVALID_OPERATION -902

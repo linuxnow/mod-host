@@ -232,6 +232,18 @@ install-lib: $(PROTOCOL_LIB)
 	    -e 's,@VERSION@,$(PROTOCOL_VERSION),' \
 	    mod-host-protocol.pc.in > $(DESTDIR)$(LIBDIR)/pkgconfig/mod-host-protocol.pc
 
+# the wire vocabulary, frozen: every #define of mod-host.h and every host-errors.h code, with the value
+# the compiler reads. abi-vocabulary fails on any change, an addition included until abi-baseline records it.
+ABI_VOCABULARY = abi/wire-vocabulary.txt
+
+abi-vocabulary:
+	CC="$(CC)" sh tests/abi-vocabulary.sh check $(SRC_DIR)/mod-host.h $(SRC_DIR)/host-errors.h $(ABI_VOCABULARY)
+
+abi-baseline:
+	CC="$(CC)" sh tests/abi-vocabulary.sh print $(SRC_DIR)/mod-host.h $(SRC_DIR)/host-errors.h > $(ABI_VOCABULARY)
+
+.PHONY: abi-vocabulary abi-baseline
+
 # manual page rule
 # Uses md2man to convert the README to groff man page
 # https://github.com/sunaku/md2man
