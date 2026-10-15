@@ -61,10 +61,16 @@ rtmempool-test: rtmempool-test.c ../src/rtmempool/*
 rtmempool-run: rtmempool-test
 	valgrind --leak-check=full --show-reachable=yes ./$<
 
+socket-test: socket-test.c ../src/socket.c ../src/socket.h
+	$(CC) $< -std=gnu99 -D_GNU_SOURCE -O1 -g -Wall -Wextra -fsanitize=address -fno-omit-frame-pointer -I../src -lpthread -o $@
+
+socket-run: socket-test
+	./$<
+
 # meta-rule to generate the object files
 %.o: %.$(EXT)
 	$(CC) $(CFLAGS) -c $(INCS) -o $@ $<
 
 # clean rule
 clean:
-	$(RM) $(SRC_DIR)/*.o $(PROG)
+	$(RM) $(SRC_DIR)/*.o $(PROG) socket-test
