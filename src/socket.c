@@ -429,6 +429,7 @@ void socket_run(int exit_on_failure)
             /* keep the unfinished tail */
             used -= command - buffer;
             memmove(buffer, command, used);
+            buffer[used] = '\0';
 
             if (g_idle_cb) g_idle_cb();
         }
@@ -442,6 +443,14 @@ void socket_run(int exit_on_failure)
         }
         else /* Client disconnected */
         {
+            /* a last command the client did not terminate is still run, as a client that sends no NUL expects */
+            if (used > 0)
+            {
+                msg.sender_id = clientfd;
+                msg.data = buffer;
+                msg.data_size = used;
+                if (g_receive_cb) g_receive_cb(&msg);
+            }
             break;
         }
     }
